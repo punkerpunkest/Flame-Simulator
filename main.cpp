@@ -1,20 +1,22 @@
 #include <SFML/Graphics.hpp>
-#include "FluidSim.hpp"
+#include "FlameSim.hpp"
 #include <ctime>
 #include <cstdlib>
 
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    sf::RenderWindow window{sf::VideoMode{{WINDOW_WIDTH, WINDOW_HEIGHT}}, "Fluid Simulator"};
+    sf::RenderWindow window{sf::VideoMode{{WINDOW_WIDTH, WINDOW_HEIGHT}}, "Flame Simulator"};
     window.setFramerateLimit(60);
 
-    FluidSim fluid{10};
+    FlameSim flame{10};
 
     constexpr float dt = 0.05f;
     constexpr float velocityScale = 2.0f;
     constexpr float densityAmount = 5.0f;
+    constexpr float temperatureAmount = 5.0f;
     constexpr float decayFactor = 0.995f;
+    
 
     sf::Vector2i lastMouse{0, 0};
     bool firstMouse = true;
@@ -26,25 +28,31 @@ int main() {
             }
         }
 
-        fluid.clearPrevDensity();
-        fluid.clearPrevVelocity();
+        flame.clearPrevDensity();
+        flame.clearPrevVelocity();
+        flame.clearPrevTemperature();
 
         if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)){
             const auto mousePos = sf::Mouse::getPosition(window);
             if(!firstMouse){
                 const auto dx = static_cast<float>(mousePos.x - lastMouse.x);
                 const auto dy = static_cast<float>(mousePos.y - lastMouse.y);
-                fluid.addVelocityAt(
+                flame.addVelocityAt(
                     static_cast<float>(mousePos.x),
                     static_cast<float>(mousePos.y),
                     dx*velocityScale,
                     dy*velocityScale
                 );
             }
-            fluid.addDensityAt(
+            flame.addDensityAt(
                 static_cast<float>(mousePos.x),
                 static_cast<float>(mousePos.y),
                 densityAmount
+            );
+            flame.addTemperatureAt(
+                static_cast<float>(mousePos.x),
+                static_cast<float>(mousePos.y),
+                temperatureAmount  
             );
 
             lastMouse = mousePos;
@@ -53,12 +61,13 @@ int main() {
             firstMouse = true;
         }
 
-        fluid.velocityStep(dt);
-        fluid.densityStep(dt);
-        fluid.decayDensity(decayFactor);
+        flame.velocityStep(dt);
+        flame.densityStep(dt);
+        flame.temperatureStep(dt);
+        flame.decayDensity(decayFactor);
 
         window.clear(sf::Color::Black);
-        fluid.displayDensity(window);
+        flame.displayFire(window);
         window.display();
     }
 
