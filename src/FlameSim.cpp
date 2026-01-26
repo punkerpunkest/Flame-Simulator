@@ -3,6 +3,11 @@
 #include <cmath>
 #include <utility>
 #include <SFML/Graphics.hpp>
+#include <omp.h>
+
+
+// compilation flag with openmp g++ -O3 -fopenmp main.cpp src/FlameSim.cpp -Iinclude -o mt_flame    -lsfml-graphics -lsfml-window -lsfml-system -lX11 -lXrandr -lXi -lXcursor -lXinerama -lGL -ldl -lpthread -lm -ludev
+
 FlameSim::FlameSim(int res)
     : resolution_{res}
     , rows_{WINDOW_HEIGHT / res}
@@ -45,32 +50,41 @@ void FlameSim::setBoundary(BoundaryType boundaryType, GridData& x) noexcept {
 }
 
 void FlameSim::addSource(GridData& x, const GridData& s, float dt) noexcept {
+    #pragma omp parallel for simd
     for (std::size_t i = 0; i < x.size(); ++i) {
         x[i] += dt * s[i];
     }
 }
+
 
 void FlameSim::diffuse(BoundaryType boundaryType, GridData& x, const GridData& x0, float diffusionRate, float dt) noexcept {
     const auto a = dt * diffusionRate * static_cast<float>(N_ * rows_);
     const auto divisor = 1.0f + 4.0f * a;
 
     for (int k = 0; k < SOLVER_ITERATIONS; ++k) {
+        #pragma omp parallel for
+
         for (int i = 1; i <= N_; ++i) {
+            #pragma omp simd
+
             for (int j = 1; j <= rows_; ++j) {
-                x[ix(i,j)] = (x0[ix(i,j)] + a*(x[ix(i-1,j)] + x[ix(i+1,j)] + x[ix(i,j-1)] + x[ix(i,j+1)])) / divisor;
+                x[ix(i,j)] =
+                    (x0[ix(i,j)] +
+                    a * (x[ix(i-1,j)] + x[ix(i+1,j)] +
+                        x[ix(i,j-1)] + x[ix(i,j+1)])) / divisor;
             }
         }
         setBoundary(boundaryType, x);
     }
 }
-
 void FlameSim::advect(BoundaryType boundaryType, GridData& d, const GridData& d0,
                       const GridData& velocityU, const GridData& velocityV, float dt) noexcept {
     const auto dt0 = dt * static_cast<float>(N_);
     const auto maxX = static_cast<float>(N_) + 0.5f;
     const auto maxY = static_cast<float>(rows_) + 0.5f;
-
+    #pragma omp parallel for
     for (int i = 1; i <= N_; ++i) {
+        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             auto x = static_cast<float>(i) - dt0 * velocityU[ix(i,j)];
             auto y = static_cast<float>(j) - dt0 * velocityV[ix(i,j)];
@@ -97,8 +111,9 @@ void FlameSim::advect(BoundaryType boundaryType, GridData& d, const GridData& d0
 void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& pressure, GridData& divergence) noexcept {
     const auto h = 1.0f / static_cast<float>(N_);
     const auto halfH = 0.5f * h;
-
+    #pragma omp parallel for
     for (int i=1; i<=N_; ++i){
+        #pragma omp simd
         for (int j=1; j<=rows_; ++j){
             divergence[ix(i,j)] = -halfH*(velocityU[ix(i+1,j)] - velocityU[ix(i-1,j)] +
                                           velocityV[ix(i,j+1)] - velocityV[ix(i,j-1)]);
@@ -110,7 +125,9 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
     setBoundary(BoundaryType::Scalar, pressure);
 
     for(int k=0;k<SOLVER_ITERATIONS;++k){
+        #pragma omp parallel for
         for(int i=1;i<=N_;++i){
+            #pragma omp simd
             for(int j=1;j<=rows_;++j){
                 pressure[ix(i,j)] = (divergence[ix(i,j)] + pressure[ix(i-1,j)] + pressure[ix(i+1,j)] + pressure[ix(i,j-1)] + pressure[ix(i,j+1)]) * 0.25f;
             }
@@ -119,7 +136,9 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
     }
 
     const auto halfOverH = 0.5f / h;
+    #pragma omp parallel for
     for(int i=1;i<=N_;++i){
+        #pragma omp simd
         for(int j=1;j<=rows_;++j){
             velocityU[ix(i,j)] -= halfOverH*(pressure[ix(i+1,j)] - pressure[ix(i-1,j)]);
             velocityV[ix(i,j)] -= halfOverH*(pressure[ix(i,j+1)] - pressure[ix(i,j-1)]);
@@ -131,7 +150,9 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
 }
 
 void FlameSim::applyBuoyancy(float dt) noexcept {
+    #pragma omp parallel for
     for (int i = 1; i <= N_; ++i) {
+        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             const float density = dens_[ix(i,j)];
             const float temperature = temp_[ix(i,j)];
@@ -145,7 +166,9 @@ void FlameSim::applyBuoyancy(float dt) noexcept {
 }
 
 void FlameSim::applyCooling(float dt) noexcept {
+    #pragma omp parallel for
     for (int i = 1; i <= N_; ++i) {
+        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             float& t = temp_[ix(i,j)];
             if (t > AMBIENT_TEMPERATURE) {
@@ -160,15 +183,19 @@ void FlameSim::applyCooling(float dt) noexcept {
 }
 
 void FlameSim::applyVorticityConfinement(float dt) noexcept {
+    #pragma omp parallel for
     for (int i = 1; i <= N_; ++i) {
+        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             const float dvdx = (v_[ix(i+1,j)] - v_[ix(i-1,j)]) * 0.5f;
             const float dudy = (u_[ix(i,j+1)] - u_[ix(i,j-1)]) * 0.5f;
             vorticity_[ix(i,j)] = dvdx - dudy;
         }
     }
-    
+
+    #pragma omp parallel for
     for (int i = 2; i < N_; ++i) {
+        #pragma omp simd
         for (int j = 2; j < rows_; ++j) {
             const float dωdx = (std::abs(vorticity_[ix(i+1,j)]) - std::abs(vorticity_[ix(i-1,j)])) * 0.5f;
             const float dωdy = (std::abs(vorticity_[ix(i,j+1)]) - std::abs(vorticity_[ix(i,j-1)])) * 0.5f;
@@ -405,5 +432,8 @@ void FlameSim::displayFire(sf::RenderWindow& window) const {
 }
 
 void FlameSim::decayDensity(float factor) noexcept {
-    for(auto& d : dens_) d *= factor;
+    #pragma omp parallel for simd
+    for (std::size_t i = 0; i < dens_.size(); ++i){
+        dens_[i] *= factor;
+    }
 }

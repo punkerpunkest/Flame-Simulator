@@ -2,8 +2,17 @@
 #include "FlameSim.hpp"
 #include <ctime>
 #include <cstdlib>
-
+#include <omp.h>
+#include <iostream>
 int main() {
+
+
+    #pragma omp parallel
+    {
+        #pragma omp single
+        std::cout << "Threads: " << omp_get_num_threads() << "\n";
+    }
+
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     sf::RenderWindow window{sf::VideoMode{{WINDOW_WIDTH, WINDOW_HEIGHT}}, "Flame Simulator"};
