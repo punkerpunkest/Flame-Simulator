@@ -2,24 +2,9 @@
 #include "FlameSim.hpp"
 #include <ctime>
 #include <cstdlib>
-#ifdef _OPENMP
-#include <omp.h>
-inline int num_threads() {
-    return omp_get_num_threads();
-}
-#else
-inline int num_threads() {
-    return 1;
-}
-#endif
 #include <iostream>
-int main() {
 
-    #pragma omp parallel
-    {
-        #pragma omp single
-        std::cout << "Threads: " << num_threads() << "\n";
-    }
+int main() {
 
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
