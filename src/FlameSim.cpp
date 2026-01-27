@@ -3,7 +3,9 @@
 #include <cmath>
 #include <utility>
 #include <SFML/Graphics.hpp>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 
 // compilation flag with openmp g++ -O3 -fopenmp main.cpp src/FlameSim.cpp -Iinclude -o mt_flame    -lsfml-graphics -lsfml-window -lsfml-system -lX11 -lXrandr -lXi -lXcursor -lXinerama -lGL -ldl -lpthread -lm -ludev
@@ -58,11 +60,12 @@ void FlameSim::addSource(GridData& x, const GridData& s, float dt) noexcept {
 
 
 void FlameSim::diffuse(BoundaryType boundaryType, GridData& x, const GridData& x0, float diffusionRate, float dt) noexcept {
+    PROFILE("diffuse");
+    
     const auto a = dt * diffusionRate * static_cast<float>(N_ * rows_);
     const auto divisor = 1.0f + 4.0f * a;
 
     for (int k = 0; k < SOLVER_ITERATIONS; ++k) {
-        #pragma omp parallel for
 
         for (int i = 1; i <= N_; ++i) {
             #pragma omp simd
@@ -77,14 +80,15 @@ void FlameSim::diffuse(BoundaryType boundaryType, GridData& x, const GridData& x
         setBoundary(boundaryType, x);
     }
 }
+
 void FlameSim::advect(BoundaryType boundaryType, GridData& d, const GridData& d0,
                       const GridData& velocityU, const GridData& velocityV, float dt) noexcept {
+    PROFILE("advect");
+    
     const auto dt0 = dt * static_cast<float>(N_);
     const auto maxX = static_cast<float>(N_) + 0.5f;
     const auto maxY = static_cast<float>(rows_) + 0.5f;
-    #pragma omp parallel for
     for (int i = 1; i <= N_; ++i) {
-        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             auto x = static_cast<float>(i) - dt0 * velocityU[ix(i,j)];
             auto y = static_cast<float>(j) - dt0 * velocityV[ix(i,j)];
@@ -109,9 +113,10 @@ void FlameSim::advect(BoundaryType boundaryType, GridData& d, const GridData& d0
 }
 
 void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& pressure, GridData& divergence) noexcept {
+    PROFILE("project");
+    
     const auto h = 1.0f / static_cast<float>(N_);
     const auto halfH = 0.5f * h;
-    #pragma omp parallel for
     for (int i=1; i<=N_; ++i){
         #pragma omp simd
         for (int j=1; j<=rows_; ++j){
@@ -125,7 +130,6 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
     setBoundary(BoundaryType::Scalar, pressure);
 
     for(int k=0;k<SOLVER_ITERATIONS;++k){
-        #pragma omp parallel for
         for(int i=1;i<=N_;++i){
             #pragma omp simd
             for(int j=1;j<=rows_;++j){
@@ -136,7 +140,6 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
     }
 
     const auto halfOverH = 0.5f / h;
-    #pragma omp parallel for
     for(int i=1;i<=N_;++i){
         #pragma omp simd
         for(int j=1;j<=rows_;++j){
@@ -150,9 +153,9 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
 }
 
 void FlameSim::applyBuoyancy(float dt) noexcept {
-    #pragma omp parallel for
+    PROFILE("buoyancy");
+
     for (int i = 1; i <= N_; ++i) {
-        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             const float density = dens_[ix(i,j)];
             const float temperature = temp_[ix(i,j)];
@@ -166,9 +169,9 @@ void FlameSim::applyBuoyancy(float dt) noexcept {
 }
 
 void FlameSim::applyCooling(float dt) noexcept {
-    #pragma omp parallel for
+    PROFILE("cooling");
+
     for (int i = 1; i <= N_; ++i) {
-        #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
             float& t = temp_[ix(i,j)];
             if (t > AMBIENT_TEMPERATURE) {
@@ -183,7 +186,8 @@ void FlameSim::applyCooling(float dt) noexcept {
 }
 
 void FlameSim::applyVorticityConfinement(float dt) noexcept {
-    #pragma omp parallel for
+    PROFILE("vorticity");
+
     for (int i = 1; i <= N_; ++i) {
         #pragma omp simd
         for (int j = 1; j <= rows_; ++j) {
@@ -193,7 +197,6 @@ void FlameSim::applyVorticityConfinement(float dt) noexcept {
         }
     }
 
-    #pragma omp parallel for
     for (int i = 2; i < N_; ++i) {
         #pragma omp simd
         for (int j = 2; j < rows_; ++j) {

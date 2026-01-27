@@ -2,15 +2,23 @@
 #include "FlameSim.hpp"
 #include <ctime>
 #include <cstdlib>
+#ifdef _OPENMP
 #include <omp.h>
+inline int num_threads() {
+    return omp_get_num_threads();
+}
+#else
+inline int num_threads() {
+    return 1;
+}
+#endif
 #include <iostream>
 int main() {
-
 
     #pragma omp parallel
     {
         #pragma omp single
-        std::cout << "Threads: " << omp_get_num_threads() << "\n";
+        std::cout << "Threads: " << num_threads() << "\n";
     }
 
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
@@ -29,6 +37,8 @@ int main() {
 
     sf::Vector2i lastMouse{0, 0};
     bool firstMouse = true;
+
+    sf::Clock printClock;
 
     while(window.isOpen()){
         while(auto event = window.pollEvent()){
@@ -78,6 +88,11 @@ int main() {
         window.clear(sf::Color::Black);
         flame.displayFire(window);
         window.display();
+
+        if (printClock.getElapsedTime().asSeconds() >= 5.0f) {
+            Profiler::get().print();
+            printClock.restart();
+        }
     }
 
     return 0;
