@@ -1,6 +1,8 @@
 # Flame Simulator
 
-We once heard that once you learn to simulate a liquid, you can also simulate gases and fire since they share a lot of the same underlying principles. We decided to test this claim by building on the work of Stam and Nguyen et al., who did wonders for liquid simulation in games. To make the simulation as realistic as possible, it includes several physics features.
+We once heard that once you learn to simulate a liquid, you can also simulate gases and fire since they share a lot of the same underlying principles. We decided to test this claim by building on the work of Stam and Nguyen et al., who did wonders for liquid simulation in games. To make the simulation as realistic as possible, we have chosen to include the following:
+
+![Flame_Simulator_C__SFML](https://github.com/user-attachments/assets/f4ad4f36-0168-411c-815d-fa11101fcda8)
 
 ## Physics Features
 
@@ -38,16 +40,11 @@ brew install sfml libomp
 sudo apt-get install libsfml-dev libomp-dev
 ```
 
-## Building
+## To run
 
 ```bash
 make
-```
-
-## Running
-
-```bash
 make run
 ```
 
-![Flame_Simulator_C__SFML](https://github.com/user-attachments/assets/f4ad4f36-0168-411c-815d-fa11101fcda8)
+
