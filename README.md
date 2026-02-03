@@ -4,8 +4,7 @@
 ![Flame_Simulator_C__SFML](https://github.com/user-attachments/assets/f4ad4f36-0168-411c-815d-fa11101fcda8)
 
 
-We once heard that once you learn to simulate a liquid, you can also simulate gases and fire since they share a lot of the same underlying principles. We decided to test this claim by building on the work of Stam and Nguyen et al., who did wonders for liquid simulation in games. To make the simulation as realistic as possible, we have chosen to include the following:
-
+We once heard that once you learn to simulate a liquid, you can also simulate gases and fire since they share the same underlying principles. We decided to test this claim by building on the works of Stam and Nguyen et al., who did wonders for liquid simulation in games (though we made this mainly because flames are awesome). To make the simulation as realistic as possible, we included the following:
 
 ## Physics Features
 
