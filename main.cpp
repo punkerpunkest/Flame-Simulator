@@ -3,9 +3,15 @@
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 int main() {
-
+    #ifdef _OPENMP
+    omp_set_num_threads(1);
+    std::cout << "Running with " << omp_get_max_threads() << " thread(s)\n";
+    #endif
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     sf::RenderWindow window{sf::VideoMode{{WINDOW_WIDTH, WINDOW_HEIGHT}}, "Flame Simulator"};

@@ -67,10 +67,21 @@ void FlameSim::diffuse(BoundaryType boundaryType, GridData& x, const GridData& x
 
     for (int k = 0; k < SOLVER_ITERATIONS; ++k) {
 
+        #pragma omp parallel for
         for (int i = 1; i <= N_; ++i) {
             #pragma omp simd
+            for (int j = 1 + (i % 2); j <= rows_; j += 2) {
+                x[ix(i,j)] =
+                    (x0[ix(i,j)] +
+                    a * (x[ix(i-1,j)] + x[ix(i+1,j)] +
+                        x[ix(i,j-1)] + x[ix(i,j+1)])) / divisor;
+            }
+        }
 
-            for (int j = 1; j <= rows_; ++j) {
+        #pragma omp parallel for
+        for (int i = 1; i <= N_; ++i) {
+            #pragma omp simd
+            for (int j = 1 + ((i + 1) % 2); j <= rows_; j += 2) {
                 x[ix(i,j)] =
                     (x0[ix(i,j)] +
                     a * (x[ix(i-1,j)] + x[ix(i+1,j)] +
@@ -130,12 +141,22 @@ void FlameSim::project(GridData& velocityU, GridData& velocityV, GridData& press
     setBoundary(BoundaryType::Scalar, pressure);
 
     for(int k=0;k<SOLVER_ITERATIONS;++k){
+        #pragma omp parallel for
         for(int i=1;i<=N_;++i){
             #pragma omp simd
-            for(int j=1;j<=rows_;++j){
+            for(int j=1 + (i % 2);j<=rows_;j+=2){
                 pressure[ix(i,j)] = (divergence[ix(i,j)] + pressure[ix(i-1,j)] + pressure[ix(i+1,j)] + pressure[ix(i,j-1)] + pressure[ix(i,j+1)]) * 0.25f;
             }
         }
+        
+        #pragma omp parallel for
+        for(int i=1;i<=N_;++i){
+            #pragma omp simd
+            for(int j=1 + ((i + 1) % 2);j<=rows_;j+=2){
+                pressure[ix(i,j)] = (divergence[ix(i,j)] + pressure[ix(i-1,j)] + pressure[ix(i+1,j)] + pressure[ix(i,j-1)] + pressure[ix(i,j+1)]) * 0.25f;
+            }
+        }
+        
         setBoundary(BoundaryType::Scalar, pressure);
     }
 
