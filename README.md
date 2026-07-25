@@ -1,6 +1,6 @@
 # Flame Simulator
 
-[![Watch the video](https://img.youtube.com/vi/TZ-eX2Oj0EY/maxresdefault.jpg)](https://www.youtube.com/watch?v=TZ-eX2Oj0EY)
+[![Watch the video](https://markdown-videos-api.jorgenkh.no/youtube/TZ-eX2Oj0EY?width=640&height=360)](https://www.youtube.com/watch?v=TZ-eX2Oj0EY)
 
 We once heard that once you learn to simulate a liquid, you can also simulate gases and fire since they share the same underlying principles. We decided to test this claim by building on the works of Stam and Nguyen et al., who did wonders for liquid simulation in games (though we made this mainly because flames are awesome). To make the simulation as realistic as possible, we included the following:
 
